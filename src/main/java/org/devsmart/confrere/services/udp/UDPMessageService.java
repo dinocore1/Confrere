@@ -1,8 +1,11 @@
-package org.devsmart.confrere.services;
+package org.devsmart.confrere.services.udp;
 
 
 import org.devsmart.confrere.Context;
+import org.devsmart.confrere.Id;
+import org.devsmart.confrere.RoutingTable;
 import org.devsmart.confrere.Utils;
+import org.devsmart.confrere.services.AbstractService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,18 +14,21 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 public class UDPMessageService extends AbstractService {
 
     protected static final Logger logger = LoggerFactory.getLogger(UDPMessageService.class);
-
     private static final int RECEIVE_TIMEOUT = 500;
+
+
+
+
     private final SocketAddress mSocketAddress;
     private DatagramSocket mSocket;
     private boolean mIsRunning = false;
     private Future<?> mReceiveTask;
+    private UDPPeerRoutingTable mPeerRoutingTable;
 
     public UDPMessageService(Context context, SocketAddress socketAddress) {
         super(context);
@@ -31,6 +37,10 @@ public class UDPMessageService extends AbstractService {
 
     @Override
     public synchronized void start() {
+        if(mIsRunning){
+            logger.warn("service already started");
+            return;
+        }
         mReceiveTask = Utils.IOThreads.submit(new Runnable() {
 
             private void setup(){
@@ -38,7 +48,8 @@ public class UDPMessageService extends AbstractService {
                     mSocket = new DatagramSocket(mSocketAddress);
                     mSocket.setSoTimeout(RECEIVE_TIMEOUT);
                 } catch (IOException e){
-
+                    logger.error("", e);
+                    mIsRunning = false;
                 }
             }
 
@@ -52,10 +63,15 @@ public class UDPMessageService extends AbstractService {
                         try {
                             final int bufSize = mSocket.getReceiveBufferSize();
                             byte[] buf = new byte[bufSize];
-                            DatagramPacket packet = new DatagramPacket(buf, buf.length);
+                            final DatagramPacket packet = new DatagramPacket(buf, buf.length);
                             mSocket.receive(packet);
+                            mContext.mainThread.execute(new Runnable(){
+                                @Override
+                                public void run() {
+                                    receive(packet);
+                                }
+                            });
 
-                            receive(packet);
 
                         } catch (SocketTimeoutException e) {
                         } catch (IOException e) {
@@ -79,18 +95,42 @@ public class UDPMessageService extends AbstractService {
     private void receive(DatagramPacket packet) {
         byte[] data = packet.getData();
         switch (data[0]){
-            case PING:
-                break;
-            case PONG:
-                break;
+            case PING: {
+                Id id = new Id(data, 1);
+                UDPPeer peer = new UDPPeer(id, packet.getSocketAddress());
+                mPeerRoutingTable.getPeer(peer);
+                sendPong(packet.getSocketAddress());
+            } break;
+            case PONG: {
+                Id id = new Id(data, 1);
+                UDPPeer peer = new UDPPeer(id, packet.getSocketAddress());
+                mPeerRoutingTable.getPeer(peer);
+            } break;
         }
+    }
+
+    private void sendPong(final SocketAddress address){
+        Utils.IOThreads.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    byte[] data = new byte[Id.NUM_BYTES + 1];
+                    data[0] = PONG;
+                    mContext.localId.write(data, 1);
+                    DatagramPacket packet = new DatagramPacket(data, 0, data.length);
+                    packet.setSocketAddress(address);
+                    mSocket.send(packet);
+                } catch (IOException e) {
+                    logger.warn("could not send UDP packet", e);
+                }
+            }
+        });
     }
 
     @Override
     public synchronized void stop() {
         if(mReceiveTask != null){
             mIsRunning = false;
-            mReceiveTask.cancel(false);
             try {
                 mReceiveTask.get();
             } catch (Exception e) {

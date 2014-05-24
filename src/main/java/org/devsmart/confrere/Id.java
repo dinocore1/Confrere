@@ -9,11 +9,18 @@ public class Id {
     protected final byte[] mData = new byte[NUM_BYTES];
 
     public Id(byte[] data){
-        if(data == null || data.length != NUM_BYTES){
+        init(data, 0);
+    }
+
+    public Id(byte[] data, int offset) {
+        init(data, offset);
+    }
+
+    private void init(byte[] data, int offset){
+        if(data.length - offset < NUM_BYTES){
             throw new IllegalArgumentException(String.format("must be a valid %d-byte array", NUM_BYTES));
-        } else {
-            System.arraycopy(data,0,mData,0,NUM_BYTES);
         }
+        System.arraycopy(data,offset,mData,0,NUM_BYTES);
     }
 
     public BigInteger distance(Id other) {
@@ -45,5 +52,9 @@ public class Id {
     @Override
     public int hashCode() {
         return Arrays.hashCode(mData);
+    }
+
+    public void write(byte[] outdata, int offset) {
+        System.arraycopy(mData, 0, outdata, offset, mData.length);
     }
 }

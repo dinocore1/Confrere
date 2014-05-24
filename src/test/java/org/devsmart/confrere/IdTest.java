@@ -1,6 +1,7 @@
 package org.devsmart.confrere;
 
 
+import com.google.gson.Gson;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.junit.Before;
@@ -18,6 +19,19 @@ public class IdTest {
     @Before
     public void inject() {
         mInjector = Guice.createInjector(new DefaultModule());
+    }
+
+    @Test
+    public void serializeTest() {
+        IdFactory factory = mInjector.getInstance(IdFactory.class);
+        Id helloWorld = factory.newId("hello world");
+
+        Gson gson = mInjector.getInstance(Gson.class);
+        String serialized = gson.toJson(helloWorld);
+
+        Id backagain = gson.fromJson(serialized, Id.class);
+
+        assertEquals(helloWorld, backagain);
     }
 
     @Test
