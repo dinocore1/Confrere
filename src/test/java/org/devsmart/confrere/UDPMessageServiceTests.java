@@ -25,7 +25,9 @@ public class UDPMessageServiceTests {
         Id myId = mInjector.getInstance(IdFactory.class).newId("hello world");
         Context context = new Context(myId);
 
-        UDPMessageService service = new UDPMessageService(context, new InetSocketAddress(InetAddress.getAllByName("0.0.0.0")[0], 9000));
+        UDPMessageService service = mInjector.getInstance(UDPMessageService.class);
+        service.setContext(context);
+        service.setSocketAddress(new InetSocketAddress(InetAddress.getAllByName("0.0.0.0")[0], 9000));
         service.start();
 
         Thread.sleep(5000);

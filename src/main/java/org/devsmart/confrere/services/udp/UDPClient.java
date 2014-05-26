@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketAddress;
@@ -22,10 +23,11 @@ public class UDPClient {
 
     protected static final Logger logger = LoggerFactory.getLogger(UDPClient.class);
 
+
     public interface Callback {
         void receivePing(UDPPeer from);
         void receivePong(UDPPeer from);
-        void receiveGetPeers(UDPPeer from);
+        void receiveGetPeers(Id target, SocketAddress from);
         void receiveGetPeersRsp(UDPGetPeers[] resp);
         void receiveRoute(Id target, byte[] payload);
     }
@@ -47,11 +49,12 @@ public class UDPClient {
     public Callback callback;
 
 
-    public void start() {
+    public void start(SocketAddress address) {
         if (mIsRunning) {
             logger.warn("service already started");
             return;
         }
+        mSocketAddress = address;
         mReceiveTask = Utils.IOThreads.submit(new Runnable() {
 
             private void setup() {
@@ -121,15 +124,20 @@ public class UDPClient {
                 }
             } break;
             case GETPEERS: {
-                Id id = new Id(data, 1);
-                UDPPeer peer = new UDPPeer(id, packet.getSocketAddress());
+                Id target = new Id(data, 1);
                 if(callback != null){
-                    callback.receiveGetPeers(peer);
+                    callback.receiveGetPeers(target, packet.getSocketAddress());
                 }
             } break;
             case GETPEERS_RSP:{
                 Gson gson = mGsonProvider.get();
-                String dataStr = new String(data, 1, packet.getLength()-1, "UTF-8");
+                String dataStr = null;
+                try {
+                    dataStr = new String(data, 1, packet.getLength()-1, "UTF-8");
+                } catch (UnsupportedEncodingException e) {
+                    logger.error("", e);
+                    throw new RuntimeException(e);
+                }
                 UDPGetPeers[] resp = gson.fromJson(dataStr, UDPGetPeers[].class);
                 if(callback != null){
                     callback.receiveGetPeersRsp(resp);

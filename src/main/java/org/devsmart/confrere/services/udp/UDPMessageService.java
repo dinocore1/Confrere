@@ -1,68 +1,99 @@
 package org.devsmart.confrere.services.udp;
 
 
-import com.google.gson.Gson;
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import org.devsmart.confrere.Context;
 import org.devsmart.confrere.Id;
-import org.devsmart.confrere.RoutingTable;
-import org.devsmart.confrere.Utils;
 import org.devsmart.confrere.services.AbstractService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketAddress;
-import java.net.SocketTimeoutException;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Future;
 
-public class UDPMessageService extends AbstractService {
+public class UDPMessageService implements AbstractService, UDPClient.Callback {
 
     protected static final Logger logger = LoggerFactory.getLogger(UDPMessageService.class);
-    private static final int RECEIVE_TIMEOUT = 500;
 
-
-
-
-    private final SocketAddress mSocketAddress;
-    private DatagramSocket mSocket;
-    private boolean mIsRunning = false;
-    private Future<?> mReceiveTask;
+    private UDPClient mClient;
     private UDPPeerRoutingTable mPeerRoutingTable;
+    private SocketAddress mSocketAddress;
+    private Context mContext;
 
 
+    public void setContext(Context context){
+        mContext = context;
+        mPeerRoutingTable = new UDPPeerRoutingTable(mContext.localId);
+    }
 
-    public UDPMessageService(Context context, SocketAddress socketAddress) {
-        super(context);
-        mSocketAddress = socketAddress;
+    @Inject
+    public void setUDPClient(UDPClient client){
+        mClient = client;
+        mClient.callback = this;
+    }
+
+    public void setSocketAddress(SocketAddress address) {
+        mSocketAddress = address;
     }
 
     @Override
-    public synchronized void start() {
-
+    public void start() {
+        mClient.start(mSocketAddress);
     }
 
-
-
-
-
-
+    @Override
+    public void stop() {
+        mClient.stop();
+    }
 
     @Override
-    public synchronized void stop() {
-        if(mReceiveTask != null){
-            mIsRunning = false;
-            try {
-                mReceiveTask.get();
-            } catch (Exception e) {
-                logger.error("unhandled exception", e);
+    public void receivePing(UDPPeer from) {
+        mContext.mainThread.execute(new Runnable() {
+            @Override
+            public void run() {
+                mPeerRoutingTable.getPeer(from);
+                mClient.sendPong(mContext.localId, from.socketAddress);
             }
-        }
+        });
+    }
+
+    @Override
+    public void receivePong(final UDPPeer from) {
+        mContext.mainThread.execute(new Runnable() {
+            @Override
+            public void run() {
+                mPeerRoutingTable.getPeer(from);
+            }
+        });
+    }
+
+    @Override
+    public void receiveGetPeers(final Id target, final SocketAddress from) {
+        mContext.mainThread.execute(new Runnable() {
+            @Override
+            public void run() {
+                List<UDPPeer> peers = mPeerRoutingTable.getPeers(target, 8);
+                mClient.sendGetPeersResponse(peers, from);
+            }
+        });
+    }
+
+    @Override
+    public void receiveGetPeersRsp(final UDPGetPeers[] resp) {
+        mContext.mainThread.execute(new Runnable() {
+            @Override
+            public void run() {
+                for(UDPGetPeers p : resp){
+                    UDPPeer peer = new UDPPeer(p.id, p.getSocketAddress());
+                    mPeerRoutingTable.getPeer(peer);
+                }
+            }
+        });
+    }
+
+    @Override
+    public void receiveRoute(Id target, byte[] payload) {
+
     }
 }
