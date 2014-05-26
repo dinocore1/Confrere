@@ -2,8 +2,11 @@ package org.devsmart.confrere.services.udp;
 
 import org.devsmart.confrere.Id;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.TreeMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class UDPPeer {
 
@@ -20,6 +23,11 @@ public class UDPPeer {
     public final Id id;
     public SocketAddress socketAddress;
     protected long mLastSeenMillisec = -1;
+    protected long mFirstSeen = -1;
+    protected int mBucketId;
+    protected TreeMap<Id, UDPPeer> mBucket;
+    private ScheduledFuture<?> mMaintanceTask;
+
 
     public UDPPeer(Id id, SocketAddress socketAddress) {
         this.id = id;
@@ -27,7 +35,10 @@ public class UDPPeer {
     }
 
     public void messageReceived() {
-        mLastSeenMillisec = 0;
+        mLastSeenMillisec = System.currentTimeMillis();
+        if(mFirstSeen == -1){
+            mFirstSeen = mLastSeenMillisec;
+        }
     }
 
     public State getState() {
@@ -42,6 +53,29 @@ public class UDPPeer {
             retval = State.DEAD;
         }
         return retval;
+    }
+
+    public void setBucket(int bucketnum, TreeMap<Id, UDPPeer> bucket) {
+        mBucketId = bucketnum;
+        mBucket = bucket;
+    }
+
+    public void scheduleMaintaince(ScheduledExecutorService mainThread, final Id myid, final UDPClient client) {
+        if(mMaintanceTask == null){
+            mMaintanceTask = mainThread.scheduleWithFixedDelay(new Runnable() {
+                @Override
+                public void run() {
+                    client.sendPing(myid, socketAddress);
+                }
+            }, 20, 20, TimeUnit.SECONDS);
+        }
+    }
+
+    public void cancelMaintaince(){
+        if(mMaintanceTask != null){
+            mMaintanceTask.cancel(false);
+            mMaintanceTask = null;
+        }
     }
 
     @Override

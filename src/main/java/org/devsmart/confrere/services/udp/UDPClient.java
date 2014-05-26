@@ -28,7 +28,7 @@ public class UDPClient {
         void receivePing(UDPPeer from);
         void receivePong(UDPPeer from);
         void receiveGetPeers(Id target, SocketAddress from);
-        void receiveGetPeersRsp(UDPGetPeers[] resp);
+        void receiveGetPeersRsp(UDPGetPeers[] resp, SocketAddress from);
         void receiveRoute(Id target, byte[] payload);
     }
 
@@ -140,7 +140,7 @@ public class UDPClient {
                 }
                 UDPGetPeers[] resp = gson.fromJson(dataStr, UDPGetPeers[].class);
                 if(callback != null){
-                    callback.receiveGetPeersRsp(resp);
+                    callback.receiveGetPeersRsp(resp, packet.getSocketAddress());
                 }
             } break;
             case ROUTE:{

@@ -9,7 +9,7 @@ import java.util.*;
 public class UDPPeerRoutingTable {
 
     private RoutingTable mRoutingTable;
-    private ArrayList<TreeMap<Id, UDPPeer>> mPeers = new ArrayList<TreeMap<Id, UDPPeer>>(Id.NUM_BYTES*8);
+    protected ArrayList<TreeMap<Id, UDPPeer>> mPeers = new ArrayList<TreeMap<Id, UDPPeer>>(Id.NUM_BYTES*8);
 
     public UDPPeerRoutingTable(Id myId){
         mRoutingTable = new RoutingTable(myId);
@@ -20,12 +20,14 @@ public class UDPPeerRoutingTable {
 
     public UDPPeer getPeer(UDPPeer peer){
         UDPPeer retval = peer;
-        TreeMap<Id, UDPPeer> bucket = mPeers.get(mRoutingTable.getBucket(peer.id));
+        final int bucketnum = mRoutingTable.getBucket(peer.id);
+        TreeMap<Id, UDPPeer> bucket = mPeers.get(bucketnum);
         UDPPeer existingPeer = bucket.get(peer.id);
         if(existingPeer != null){
             retval = existingPeer;
         } else {
             bucket.put(peer.id, peer);
+            peer.setBucket(bucketnum, bucket);
         }
         retval.messageReceived();
         return retval;
