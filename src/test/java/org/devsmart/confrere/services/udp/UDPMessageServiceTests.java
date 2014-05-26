@@ -1,18 +1,26 @@
 package org.devsmart.confrere.services.udp;
 
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import org.devsmart.confrere.*;
+import org.devsmart.confrere.Context;
+import org.devsmart.confrere.DefaultModule;
+import org.devsmart.confrere.Id;
+import org.devsmart.confrere.Utils;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
+import org.slf4j.LoggerFactory;
 
-import java.net.*;
+import java.net.Inet4Address;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class UDPMessageServiceTests {
 
@@ -21,6 +29,13 @@ public class UDPMessageServiceTests {
     @Before
     public void inject() {
         mInjector = Guice.createInjector(new DefaultModule());
+    }
+
+    @Before
+    public void setuplogging() {
+        Logger logger = (Logger) LoggerFactory.getLogger("org.devsmart");
+        logger.setLevel(Level.ALL);
+
     }
 
     private Id createId(String firstHex) {

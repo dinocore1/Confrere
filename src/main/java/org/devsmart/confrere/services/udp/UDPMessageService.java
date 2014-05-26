@@ -25,6 +25,7 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
     private SocketAddress mSocketAddress;
     private Context mContext;
     private ScheduledFuture<?> mPrunePeersTask;
+    private ScheduledFuture<?> mBootstrapMaintanceTask;
 
     public void setContext(Context context){
         mContext = context;
@@ -44,6 +45,7 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
     @Override
     public void start() {
         mClient.start(mSocketAddress);
+        mBootstrapMaintanceTask = mContext.mainThread.scheduleWithFixedDelay(mBootstrapTaskRunnable, 30, 30, TimeUnit.SECONDS);
         mPrunePeersTask = mContext.mainThread.scheduleWithFixedDelay(mPrunePeersTaskRunnable, 2, 2, TimeUnit.MINUTES);
     }
 
@@ -51,6 +53,9 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
     public void stop() {
         if(mPrunePeersTask != null){
             mPrunePeersTask.cancel(false);
+        }
+        if(mBootstrapMaintanceTask != null){
+            mBootstrapMaintanceTask.cancel(false);
         }
         mClient.stop();
     }
@@ -75,9 +80,8 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
         mContext.mainThread.execute(new Runnable() {
             @Override
             public void run() {
-                if(logger.isTraceEnabled()) {
-                    logger.trace("receive ping from {}", from);
-                }
+                logger.trace("receive ping from {}", from);
+
                 UDPPeer peer = mPeerRoutingTable.getPeer(from);
                 if(isInterested(peer)) {
                     peer.scheduleMaintenance(mContext.mainThread, mContext.localId, mClient);
@@ -92,9 +96,8 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
         mContext.mainThread.execute(new Runnable() {
             @Override
             public void run() {
-                if(logger.isTraceEnabled()) {
-                    logger.trace("receive pong from {}", from);
-                }
+                logger.trace("receive pong from {}", from);
+
                 mPeerRoutingTable.getPeer(from);
             }
         });
@@ -105,9 +108,8 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
         mContext.mainThread.execute(new Runnable() {
             @Override
             public void run() {
-                if(logger.isTraceEnabled()) {
-                    logger.trace("receive ping from {}", from);
-                }
+                logger.trace("receive ping from {}", from);
+
                 List<UDPPeer> peers = mPeerRoutingTable.getPeers(target, 8);
                 mClient.sendGetPeersResponse(peers, from);
             }
@@ -119,9 +121,8 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
         mContext.mainThread.execute(new Runnable() {
             @Override
             public void run() {
-                if(logger.isTraceEnabled()){
-                    logger.trace("receive getpeersresp from {}", from);
-                }
+                logger.trace("receive getpeersresp from {}", from);
+
                 for(UDPGetPeers p : resp){
                     try {
                         UDPPeer peer = mPeerRoutingTable.getPeer(new UDPPeer(p.id, p.getSocketAddress()));
@@ -141,6 +142,25 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
 
     }
 
+    protected Runnable mBootstrapTaskRunnable = new Runnable() {
+
+        @Override
+        public void run() {
+            logger.trace("Running bootstrap maintenance");
+
+            ArrayList<UDPPeer> allPeers = new ArrayList<UDPPeer>(mPeerRoutingTable.getAllPeers());
+            Collections.shuffle(allPeers);
+
+            Iterator<UDPPeer> it = allPeers.iterator();
+            int count = 0;
+            while(it.hasNext() && count < 8) {
+                UDPPeer peer = it.next();
+                mClient.sendGetPeers(mContext.localId, peer.socketAddress);
+                count++;
+            }
+        }
+    };
+
     protected Runnable mPrunePeersTaskRunnable = new Runnable() {
 
         private final Comparator<UDPPeer> NewestFirst = new Comparator<UDPPeer>() {
@@ -152,6 +172,8 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
 
         @Override
         public void run() {
+            logger.trace("Running prune task");
+
             for(HashMap<Id, UDPPeer> bucket : mPeerRoutingTable.mPeers) {
                 if(bucket.size() > MAX_PEERS_BUCKET) {
                     ArrayList<UDPPeer> peers = new ArrayList<UDPPeer>(bucket.values());

@@ -69,4 +69,12 @@ public class UDPPeerRoutingTable {
             }
         }
     }
+
+    public Set<UDPPeer> getAllPeers() {
+        HashSet<UDPPeer> retval = new HashSet<UDPPeer>();
+        for(HashMap<Id, UDPPeer> bucket : mPeers){
+            retval.addAll(bucket.values());
+        }
+        return retval;
+    }
 }
