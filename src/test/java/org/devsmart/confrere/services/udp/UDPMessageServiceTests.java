@@ -35,14 +35,41 @@ public class UDPMessageServiceTests {
     private void waitForNoOp(Context context) throws ExecutionException, InterruptedException {
         context.mainThread.submit(new Runnable(){
             @Override
-            public void run() {
-
-            }
+            public void run() {}
         }).get();
     }
 
     @Test
-    public void testMaintenance() throws Exception {
+    public void testPing() throws Exception {
+        final Id id1 = createId("00");
+        Context context1 = new Context(id1);
+        UDPMessageService service1 = mInjector.getInstance(UDPMessageService.class);
+        service1.setContext(context1);
+        service1.setSocketAddress(new InetSocketAddress(Inet4Address.getByName("0.0.0.0"), 9000));
+        service1.start();
+
+        final Id id2 = createId("80");
+        Context context2 = new Context(id2);
+        UDPMessageService service2 = mInjector.getInstance(UDPMessageService.class);
+        service2.setContext(context2);
+        service2.setSocketAddress(new InetSocketAddress(Inet4Address.getByName("0.0.0.0"), 9001));
+        service2.start();
+
+        Thread.sleep(1000);
+
+
+        service1.addPeer(new InetSocketAddress(Inet4Address.getByName("0.0.0.0"), 9001));
+
+        Thread.sleep(1000);
+
+        assertEquals(1, service2.mPeerRoutingTable.mPeers.get(0).size());
+        UDPPeer peer = service2.mPeerRoutingTable.mPeers.get(0).values().iterator().next();
+        assertEquals(createId("00"), peer.id);
+
+    }
+
+    @Test
+    public void testReceiveGetPeersAndPrune() throws Exception {
         Id myId = createId("FF");
         Context context = new Context(myId);
 

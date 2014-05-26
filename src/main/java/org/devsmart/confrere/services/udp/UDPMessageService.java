@@ -8,6 +8,7 @@ import org.devsmart.confrere.services.AbstractService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.*;
@@ -74,6 +75,9 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
         mContext.mainThread.execute(new Runnable() {
             @Override
             public void run() {
+                if(logger.isTraceEnabled()) {
+                    logger.trace("receive ping from {}", from);
+                }
                 UDPPeer peer = mPeerRoutingTable.getPeer(from);
                 if(isInterested(peer)) {
                     peer.scheduleMaintenance(mContext.mainThread, mContext.localId, mClient);
@@ -88,6 +92,9 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
         mContext.mainThread.execute(new Runnable() {
             @Override
             public void run() {
+                if(logger.isTraceEnabled()) {
+                    logger.trace("receive pong from {}", from);
+                }
                 mPeerRoutingTable.getPeer(from);
             }
         });
@@ -98,6 +105,9 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
         mContext.mainThread.execute(new Runnable() {
             @Override
             public void run() {
+                if(logger.isTraceEnabled()) {
+                    logger.trace("receive ping from {}", from);
+                }
                 List<UDPPeer> peers = mPeerRoutingTable.getPeers(target, 8);
                 mClient.sendGetPeersResponse(peers, from);
             }
@@ -109,6 +119,9 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
         mContext.mainThread.execute(new Runnable() {
             @Override
             public void run() {
+                if(logger.isTraceEnabled()){
+                    logger.trace("receive getpeersresp from {}", from);
+                }
                 for(UDPGetPeers p : resp){
                     try {
                         UDPPeer peer = mPeerRoutingTable.getPeer(new UDPPeer(p.id, p.getSocketAddress()));
@@ -168,4 +181,13 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
             }
         }
     };
+
+    public void addPeer(final InetSocketAddress address) {
+        mContext.mainThread.execute(new Runnable(){
+            @Override
+            public void run() {
+                mClient.sendPing(mContext.localId, address);
+            }
+        });
+    }
 }
