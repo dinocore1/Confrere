@@ -3,7 +3,7 @@ package org.devsmart.confrere.services.udp;
 import org.devsmart.confrere.Id;
 
 import java.net.SocketAddress;
-import java.util.TreeMap;
+import java.util.HashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -25,13 +25,13 @@ public class UDPPeer {
     protected long mLastSeenMillisec = -1;
     protected long mFirstSeen = -1;
     protected int mBucketId;
-    protected TreeMap<Id, UDPPeer> mBucket;
+    protected HashMap<Id, UDPPeer> mBucket;
     private ScheduledFuture<?> mMaintanceTask;
 
 
     public UDPPeer(Id id, SocketAddress socketAddress) {
         this.id = id;
-        socketAddress = socketAddress;
+        this.socketAddress = socketAddress;
     }
 
     public void messageReceived() {
@@ -42,12 +42,14 @@ public class UDPPeer {
     }
 
     public State getState() {
+        final long now = System.currentTimeMillis();
+        final long lastSeen = now - mLastSeenMillisec;
         State retval = null;
         if(mLastSeenMillisec == -1){
             retval = State.UNKNOWN;
-        } if(mLastSeenMillisec < DYINGTIMEOUT) {
+        } if(lastSeen < DYINGTIMEOUT) {
             retval = State.ALIVE;
-        } else if(mLastSeenMillisec < DEADTIMEOUT){
+        } else if(lastSeen < DEADTIMEOUT){
             retval = State.DYING;
         } else {
             retval = State.DEAD;
@@ -55,12 +57,12 @@ public class UDPPeer {
         return retval;
     }
 
-    public void setBucket(int bucketnum, TreeMap<Id, UDPPeer> bucket) {
+    public void setBucket(int bucketnum, HashMap<Id, UDPPeer> bucket) {
         mBucketId = bucketnum;
         mBucket = bucket;
     }
 
-    public void scheduleMaintaince(ScheduledExecutorService mainThread, final Id myid, final UDPClient client) {
+    public void scheduleMaintenance(ScheduledExecutorService mainThread, final Id myid, final UDPClient client) {
         if(mMaintanceTask == null){
             mMaintanceTask = mainThread.scheduleWithFixedDelay(new Runnable() {
                 @Override

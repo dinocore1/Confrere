@@ -17,10 +17,10 @@ import java.util.concurrent.TimeUnit;
 public class UDPMessageService implements AbstractService, UDPClient.Callback {
 
     protected static final Logger logger = LoggerFactory.getLogger(UDPMessageService.class);
-    private static final int MAX_PEERS_BUCKET = 8;
+    public static final int MAX_PEERS_BUCKET = 8;
 
     private UDPClient mClient;
-    private UDPPeerRoutingTable mPeerRoutingTable;
+    protected UDPPeerRoutingTable mPeerRoutingTable;
     private SocketAddress mSocketAddress;
     private Context mContext;
     private ScheduledFuture<?> mPrunePeersTask;
@@ -76,7 +76,7 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
             public void run() {
                 UDPPeer peer = mPeerRoutingTable.getPeer(from);
                 if(isInterested(peer)) {
-                    peer.scheduleMaintaince(mContext.mainThread, mContext.localId, mClient);
+                    peer.scheduleMaintenance(mContext.mainThread, mContext.localId, mClient);
                     mClient.sendPong(mContext.localId, from.socketAddress);
                 }
             }
@@ -113,7 +113,7 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
                     try {
                         UDPPeer peer = mPeerRoutingTable.getPeer(new UDPPeer(p.id, p.getSocketAddress()));
                         if(isInterested(peer)){
-                            peer.scheduleMaintaince(mContext.mainThread, mContext.localId, mClient);
+                            peer.scheduleMaintenance(mContext.mainThread, mContext.localId, mClient);
                         }
                     } catch(UnknownHostException e) {
                         logger.warn("GETPEERS response from {} contain unknown host: {}", from, p.ad);
@@ -128,18 +128,18 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
 
     }
 
-    private Runnable mPrunePeersTaskRunnable = new Runnable() {
+    protected Runnable mPrunePeersTaskRunnable = new Runnable() {
 
         private final Comparator<UDPPeer> NewestFirst = new Comparator<UDPPeer>() {
             @Override
             public int compare(UDPPeer udpPeer, UDPPeer udpPeer2) {
-                return new Long(udpPeer.mFirstSeen).compareTo(new Long(udpPeer2.mFirstSeen));
+                return new Long(udpPeer2.mFirstSeen).compareTo(new Long(udpPeer.mFirstSeen));
             }
         };
 
         @Override
         public void run() {
-            for(TreeMap<Id, UDPPeer> bucket : mPeerRoutingTable.mPeers) {
+            for(HashMap<Id, UDPPeer> bucket : mPeerRoutingTable.mPeers) {
                 if(bucket.size() > MAX_PEERS_BUCKET) {
                     ArrayList<UDPPeer> peers = new ArrayList<UDPPeer>(bucket.values());
 

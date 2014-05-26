@@ -16,8 +16,9 @@ public class UDPGetPeers {
     public SocketAddress getSocketAddress() throws UnknownHostException {
         final int i = ad.indexOf(":");
         String addstr = ad.substring(0, i);
-        int port = Integer.parseInt(ad.substring(i+1, ad.length()-(i+1)));
-        InetAddress address = InetAddress.getByName(ad);
+        String portstr = ad.substring(i+1, ad.length());
+        int port = Integer.parseInt(portstr);
+        InetAddress address = InetAddress.getByName(addstr);
         return new InetSocketAddress(address, port);
     }
 }
