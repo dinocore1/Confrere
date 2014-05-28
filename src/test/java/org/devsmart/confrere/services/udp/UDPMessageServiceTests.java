@@ -3,19 +3,18 @@ package org.devsmart.confrere.services.udp;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import com.google.common.io.BaseEncoding;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.devsmart.confrere.Context;
 import org.devsmart.confrere.DefaultModule;
 import org.devsmart.confrere.Id;
-import org.devsmart.confrere.Utils;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -41,7 +40,7 @@ public class UDPMessageServiceTests {
     private Id createId(String firstHex) {
         byte[] data = new byte[Id.NUM_BYTES];
 
-        byte[] prefix = Utils.hexToBytes(firstHex);
+        byte[] prefix = BaseEncoding.base16().decode(firstHex);
         System.arraycopy(prefix, 0, data, 0, prefix.length);
 
         return new Id(data);
@@ -75,7 +74,9 @@ public class UDPMessageServiceTests {
 
         service1.addPeer(new InetSocketAddress(Inet4Address.getByName("0.0.0.0"), 9001));
 
+        waitForNoOp(context1);
         Thread.sleep(1000);
+        waitForNoOp(context2);
 
         assertEquals(1, service2.mPeerRoutingTable.mPeers.get(0).size());
         UDPPeer peer = service2.mPeerRoutingTable.mPeers.get(0).values().iterator().next();
@@ -91,7 +92,7 @@ public class UDPMessageServiceTests {
         UDPMessageService service = mInjector.getInstance(UDPMessageService.class);
         service.setContext(context);
 
-        SocketAddress fakeSocketAddress = new InetSocketAddress(Inet4Address.getByName("10.10.10.10"), 9000);
+        InetSocketAddress fakeSocketAddress = new InetSocketAddress(Inet4Address.getByName("10.10.10.10"), 9000);
         UDPGetPeers[] peers = new UDPGetPeers[10];
         for(int i=0;i<10;i++){
             peers[i] = new UDPGetPeers();

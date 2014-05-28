@@ -1,6 +1,7 @@
 package org.devsmart.confrere;
 
 
+import com.google.common.io.BaseEncoding;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.junit.Before;
@@ -20,7 +21,7 @@ public class RoutingTableTests {
     private Id createId(String firstHex) {
         byte[] data = new byte[Id.NUM_BYTES];
 
-        byte[] prefix = Utils.hexToBytes(firstHex);
+        byte[] prefix = BaseEncoding.base16().decode(firstHex);
         System.arraycopy(prefix, 0, data, 0, prefix.length);
 
         return new Id(data);

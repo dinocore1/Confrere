@@ -1,8 +1,9 @@
 package org.devsmart.confrere.services.udp;
 
+import com.google.common.io.BaseEncoding;
 import org.devsmart.confrere.Id;
 
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -21,7 +22,7 @@ public class UDPPeer {
     }
 
     public final Id id;
-    public SocketAddress socketAddress;
+    public InetSocketAddress socketAddress;
     protected long mLastSeenMillisec = -1;
     protected long mFirstSeen = -1;
     protected int mBucketId;
@@ -29,7 +30,7 @@ public class UDPPeer {
     private ScheduledFuture<?> mMaintanceTask;
 
 
-    public UDPPeer(Id id, SocketAddress socketAddress) {
+    public UDPPeer(Id id, InetSocketAddress socketAddress) {
         this.id = id;
         this.socketAddress = socketAddress;
     }
@@ -96,7 +97,8 @@ public class UDPPeer {
 
     @Override
     public String toString() {
-        return String.format("UDPPeer[%s/%s]", id.toHex().substring(0, 4), socketAddress);
+        String idstr = BaseEncoding.base64().encode(id.getBytes());
+        return String.format("UDPPeer[%s/%s]", idstr.substring(0, 4), socketAddress);
     }
 
 }

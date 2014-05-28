@@ -1,6 +1,7 @@
 package org.devsmart.confrere;
 
 
+import com.google.common.io.BaseEncoding;
 import com.google.gson.Gson;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -45,12 +46,15 @@ public class IdTest {
     }
 
     @Test
-    public void testToHex(){
+    public void testWrite(){
         IdFactory factory = mInjector.getInstance(IdFactory.class);
         Id helloWorld = factory.newId("hello world");
 
-        String hex = helloWorld.toHex();
-        assertEquals("2AAE6C35C94FCFB415DBE95F408B9CE91EE846ED", hex);
+        byte[] data = new byte[Id.NUM_BYTES];
+        helloWorld.write(data, 0);
+
+        byte[] expected = BaseEncoding.base16().decode("2AAE6C35C94FCFB415DBE95F408B9CE91EE846ED");
+        assertArrayEquals(expected, data);
     }
 
     @Test

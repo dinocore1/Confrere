@@ -1,5 +1,7 @@
 package org.devsmart.confrere;
 
+import com.google.common.io.BaseEncoding;
+
 import java.math.BigInteger;
 import java.util.Arrays;
 
@@ -31,13 +33,10 @@ public class Id {
         return new BigInteger(1, resultBytes);
     }
 
-    public String toHex() {
-        return Utils.bytesToHex(mData);
-    }
-
     @Override
     public String toString() {
-        return String.format("Id[%s]", Utils.bytesToHex(mData, 0, 3));
+        String base64str = BaseEncoding.base64().encode(mData);
+        return String.format("Id[%s]", base64str.substring(0, 5));
     }
 
     @Override
@@ -56,5 +55,11 @@ public class Id {
 
     public void write(byte[] outdata, int offset) {
         System.arraycopy(mData, 0, outdata, offset, mData.length);
+    }
+
+    public byte[] getBytes() {
+        byte[] retval = new byte[mData.length];
+        write(retval, 0);
+        return retval;
     }
 }

@@ -1,6 +1,8 @@
 package org.devsmart.confrere.services.udp;
 
 
+import com.google.common.base.Charsets;
+import com.google.common.net.InetAddresses;
 import com.google.gson.Gson;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -11,10 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.SocketAddress;
-import java.net.SocketTimeoutException;
+import java.net.*;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -27,16 +26,16 @@ public class UDPClient {
     public interface Callback {
         void receivePing(UDPPeer from);
         void receivePong(UDPPeer from);
-        void receiveGetPeers(Id target, SocketAddress from);
-        void receiveGetPeersRsp(UDPGetPeers[] resp, SocketAddress from);
-        void receiveRoute(Id target, byte[] payload);
+        void receiveGetPeers(Id target, InetSocketAddress from);
+        void receiveGetPeersRsp(UDPGetPeers[] resp, InetSocketAddress from);
+        void receivePayload(Id target, byte[] payload, InetSocketAddress from);
     }
 
     private static final byte PING = 0;
     private static final byte PONG = 1;
     private static final byte GETPEERS = 2;
     private static final byte GETPEERS_RSP = 3;
-    private static final byte ROUTE = 4;
+    private static final byte PAYLOAD = 4;
 
     private static final int RECEIVE_TIMEOUT = 500;
 
@@ -107,18 +106,19 @@ public class UDPClient {
     }
 
     private void receive(DatagramPacket packet) {
+        InetSocketAddress from = new InetSocketAddress(packet.getAddress(), packet.getPort());
         byte[] data = packet.getData();
         switch (data[0]){
             case PING: {
                 Id id = new Id(data, 1);
-                UDPPeer peer = new UDPPeer(id, packet.getSocketAddress());
+                UDPPeer peer = new UDPPeer(id, from);
                 if(callback != null){
                     callback.receivePing(peer);
                 }
             } break;
             case PONG: {
                 Id id = new Id(data, 1);
-                UDPPeer peer = new UDPPeer(id, packet.getSocketAddress());
+                UDPPeer peer = new UDPPeer(id, from);
                 if(callback != null){
                     callback.receivePong(peer);
                 }
@@ -126,7 +126,7 @@ public class UDPClient {
             case GETPEERS: {
                 Id target = new Id(data, 1);
                 if(callback != null){
-                    callback.receiveGetPeers(target, packet.getSocketAddress());
+                    callback.receiveGetPeers(target, from);
                 }
             } break;
             case GETPEERS_RSP:{
@@ -140,15 +140,15 @@ public class UDPClient {
                 }
                 UDPGetPeers[] resp = gson.fromJson(dataStr, UDPGetPeers[].class);
                 if(callback != null){
-                    callback.receiveGetPeersRsp(resp, packet.getSocketAddress());
+                    callback.receiveGetPeersRsp(resp, from);
                 }
             } break;
-            case ROUTE:{
+            case PAYLOAD:{
                 Id id = new Id(data, 1);
                 byte[] payload = new byte[packet.getLength()-(Id.NUM_BYTES+1)];
                 System.arraycopy(data, Id.NUM_BYTES+1, payload, 0, payload.length);
                 if(callback != null){
-                    callback.receiveRoute(id, payload);
+                    callback.receivePayload(id, payload, from);
                 }
             } break;
         }
@@ -171,14 +171,29 @@ public class UDPClient {
         });
     }
 
-    public void sendPong(final Id id, final SocketAddress address){
+    private static class PongMsg {
+        Id id;
+        String ad;
+    }
+
+    public void sendPong(final Id id, final InetSocketAddress address){
         Utils.IOThreads.execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    byte[] data = new byte[Id.NUM_BYTES + 1];
+
+                    Gson gson = mGsonProvider.get();
+
+                    PongMsg msg = new PongMsg();
+                    msg.id = id;
+                    msg.ad = String.format("%s:%d", InetAddresses.toAddrString(address.getAddress()), address.getPort());
+
+                    String msgStr = gson.toJson(msg);
+                    byte[] msgStrdata = msgStr.getBytes(Charsets.UTF_8);
+
+                    byte[] data = new byte[1 + msgStrdata.length];
                     data[0] = PONG;
-                    id.write(data, 1);
+                    System.arraycopy(msgStrdata, 0, data, 1, msgStrdata.length);
                     DatagramPacket packet = new DatagramPacket(data, 0, data.length, address);
                     mSocket.send(packet);
                 } catch (IOException e) {
@@ -242,7 +257,7 @@ public class UDPClient {
             public void run() {
                 try {
                     byte[] data = new byte[1 + Id.NUM_BYTES + payload.length];
-                    data[0] = ROUTE;
+                    data[0] = PAYLOAD;
                     target.write(data, 1);
                     System.arraycopy(payload, 0, data, 1 + Id.NUM_BYTES, payload.length);
                     DatagramPacket packet = new DatagramPacket(data, 0, data.length, address);

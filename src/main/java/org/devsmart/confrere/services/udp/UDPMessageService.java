@@ -104,7 +104,7 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
     }
 
     @Override
-    public void receiveGetPeers(final Id target, final SocketAddress from) {
+    public void receiveGetPeers(final Id target, final InetSocketAddress from) {
         mContext.mainThread.execute(new Runnable() {
             @Override
             public void run() {
@@ -117,7 +117,7 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
     }
 
     @Override
-    public void receiveGetPeersRsp(final UDPGetPeers[] resp, final SocketAddress from) {
+    public void receiveGetPeersRsp(final UDPGetPeers[] resp, final InetSocketAddress from) {
         mContext.mainThread.execute(new Runnable() {
             @Override
             public void run() {
@@ -138,7 +138,7 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
     }
 
     @Override
-    public void receiveRoute(Id target, byte[] payload) {
+    public void receivePayload(Id target, byte[] payload, InetSocketAddress from) {
 
     }
 
