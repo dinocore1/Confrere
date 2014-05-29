@@ -1,6 +1,10 @@
 package org.devsmart.confrere.services.udp;
 
 
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import org.devsmart.confrere.Context;
 import org.devsmart.confrere.Id;
@@ -19,6 +23,7 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
 
     protected static final Logger logger = LoggerFactory.getLogger(UDPMessageService.class);
     public static final int MAX_PEERS_BUCKET = 8;
+    public static final int MAX_EXTERNAL_ADDRESSES = 10;
 
     private UDPClient mClient;
     protected UDPPeerRoutingTable mPeerRoutingTable;
@@ -26,6 +31,8 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
     private Context mContext;
     private ScheduledFuture<?> mPrunePeersTask;
     private ScheduledFuture<?> mBootstrapMaintanceTask;
+    private ExternalAddresses mExternalAddresses = new ExternalAddresses(MAX_EXTERNAL_ADDRESSES);
+
 
     public void setContext(Context context){
         mContext = context;
@@ -92,16 +99,18 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
     }
 
     @Override
-    public void receivePong(final UDPPeer from) {
+    public void receivePong(final UDPPeer from, final InetSocketAddress externalAddress) {
         mContext.mainThread.execute(new Runnable() {
             @Override
             public void run() {
-                logger.trace("receive pong from {}", from);
-
+                logger.trace("receive pong from {} external address: {}", from, externalAddress);
+                mExternalAddresses.addExternalAddress(externalAddress);
                 mPeerRoutingTable.getPeer(from);
             }
         });
     }
+
+
 
     @Override
     public void receiveGetPeers(final Id target, final InetSocketAddress from) {
@@ -124,13 +133,9 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
                 logger.trace("receive getpeersresp from {}", from);
 
                 for(UDPGetPeers p : resp){
-                    try {
-                        UDPPeer peer = mPeerRoutingTable.getPeer(new UDPPeer(p.id, p.getSocketAddress()));
-                        if(isInterested(peer)){
-                            peer.scheduleMaintenance(mContext.mainThread, mContext.localId, mClient);
-                        }
-                    } catch(UnknownHostException e) {
-                        logger.warn("GETPEERS response from {} contain unknown host: {}", from, p.ad);
+                    UDPPeer peer = mPeerRoutingTable.getPeer(new UDPPeer(p.id, p.getSocketAddress()));
+                    if(isInterested(peer)){
+                        peer.scheduleMaintenance(mContext.mainThread, mContext.localId, mClient);
                     }
                 }
             }

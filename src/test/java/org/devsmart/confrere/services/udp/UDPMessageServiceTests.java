@@ -4,6 +4,7 @@ package org.devsmart.confrere.services.udp;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import com.google.common.io.BaseEncoding;
+import com.google.common.net.InetAddresses;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.devsmart.confrere.Context;
@@ -59,20 +60,20 @@ public class UDPMessageServiceTests {
         Context context1 = new Context(id1);
         UDPMessageService service1 = mInjector.getInstance(UDPMessageService.class);
         service1.setContext(context1);
-        service1.setSocketAddress(new InetSocketAddress(Inet4Address.getByName("0.0.0.0"), 9000));
+        service1.setSocketAddress(new InetSocketAddress(InetAddresses.forString("0.0.0.0"), 9000));
         service1.start();
 
         final Id id2 = createId("80");
         Context context2 = new Context(id2);
         UDPMessageService service2 = mInjector.getInstance(UDPMessageService.class);
         service2.setContext(context2);
-        service2.setSocketAddress(new InetSocketAddress(Inet4Address.getByName("0.0.0.0"), 9001));
+        service2.setSocketAddress(new InetSocketAddress(InetAddresses.forString("0.0.0.0"), 9001));
         service2.start();
 
         Thread.sleep(1000);
 
 
-        service1.addPeer(new InetSocketAddress(Inet4Address.getByName("0.0.0.0"), 9001));
+        service1.addPeer(new InetSocketAddress(InetAddresses.forString("0.0.0.0"), 9001));
 
         waitForNoOp(context1);
         Thread.sleep(1000);
@@ -92,7 +93,7 @@ public class UDPMessageServiceTests {
         UDPMessageService service = mInjector.getInstance(UDPMessageService.class);
         service.setContext(context);
 
-        InetSocketAddress fakeSocketAddress = new InetSocketAddress(Inet4Address.getByName("10.10.10.10"), 9000);
+        InetSocketAddress fakeSocketAddress = new InetSocketAddress(InetAddresses.forString("10.10.10.10"), 9000);
         UDPGetPeers[] peers = new UDPGetPeers[10];
         for(int i=0;i<10;i++){
             peers[i] = new UDPGetPeers();
@@ -109,10 +110,8 @@ public class UDPMessageServiceTests {
         peers = new UDPGetPeers[10];
         for(int i=0;i<10;i++){
             peers[i] = new UDPGetPeers();
-            String hex = Integer.toHexString(i+10);
-            if(hex.length() == 1){
-                hex = "0" + hex;
-            }
+
+            String hex = String.format("%02X", 0xff & i+10);
             peers[i].id = createId("00" + hex);
             peers[i].ad = "10.10.10." + (i+10) + ":3000";
         }

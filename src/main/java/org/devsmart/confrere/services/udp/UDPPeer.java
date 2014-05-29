@@ -1,6 +1,7 @@
 package org.devsmart.confrere.services.udp;
 
 import com.google.common.io.BaseEncoding;
+import com.google.common.net.InetAddresses;
 import org.devsmart.confrere.Id;
 
 import java.net.InetSocketAddress;
@@ -98,7 +99,8 @@ public class UDPPeer {
     @Override
     public String toString() {
         String idstr = BaseEncoding.base64().encode(id.getBytes());
-        return String.format("UDPPeer[%s/%s]", idstr.substring(0, 4), socketAddress);
+        String ipaddr = String.format("%s:%d", InetAddresses.toAddrString(socketAddress.getAddress()), socketAddress.getPort());
+        return String.format("UDPPeer[%s/%s]", idstr.substring(0, 4), ipaddr);
     }
 
 }

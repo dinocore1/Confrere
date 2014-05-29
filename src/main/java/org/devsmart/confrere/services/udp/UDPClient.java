@@ -25,7 +25,7 @@ public class UDPClient {
 
     public interface Callback {
         void receivePing(UDPPeer from);
-        void receivePong(UDPPeer from);
+        void receivePong(UDPPeer from, InetSocketAddress externalAddress);
         void receiveGetPeers(Id target, InetSocketAddress from);
         void receiveGetPeersRsp(UDPGetPeers[] resp, InetSocketAddress from);
         void receivePayload(Id target, byte[] payload, InetSocketAddress from);
@@ -117,10 +117,13 @@ public class UDPClient {
                 }
             } break;
             case PONG: {
-                Id id = new Id(data, 1);
-                UDPPeer peer = new UDPPeer(id, from);
+                Gson gson = mGsonProvider.get();
+                String dataStr = new String(data, 1, packet.getLength()-1, Charsets.UTF_8);
+                PongMsg msg = gson.fromJson(dataStr, PongMsg.class);
+
+                UDPPeer peer = new UDPPeer(msg.id, from);
                 if(callback != null){
-                    callback.receivePong(peer);
+                    callback.receivePong(peer, msg.getSocketAddress());
                 }
             } break;
             case GETPEERS: {
@@ -131,13 +134,7 @@ public class UDPClient {
             } break;
             case GETPEERS_RSP:{
                 Gson gson = mGsonProvider.get();
-                String dataStr = null;
-                try {
-                    dataStr = new String(data, 1, packet.getLength()-1, "UTF-8");
-                } catch (UnsupportedEncodingException e) {
-                    logger.error("", e);
-                    throw new RuntimeException(e);
-                }
+                String dataStr = new String(data, 1, packet.getLength()-1, Charsets.UTF_8);
                 UDPGetPeers[] resp = gson.fromJson(dataStr, UDPGetPeers[].class);
                 if(callback != null){
                     callback.receiveGetPeersRsp(resp, from);
@@ -174,6 +171,10 @@ public class UDPClient {
     private static class PongMsg {
         Id id;
         String ad;
+
+        public InetSocketAddress getSocketAddress() {
+            return Utils.parseSocketAddress(ad);
+        }
     }
 
     public void sendPong(final Id id, final InetSocketAddress address){
@@ -181,7 +182,6 @@ public class UDPClient {
             @Override
             public void run() {
                 try {
-
                     Gson gson = mGsonProvider.get();
 
                     PongMsg msg = new PongMsg();
