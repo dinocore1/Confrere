@@ -23,7 +23,52 @@ knows which ones are likely to respond.
 
 ###Route###
 args: Id dest, byte[] payload
-request to route payload to destination address 
+request to route payload to destination address
+
+###Stream Connection###
+
+
+## Protocol ##
+
+Packet Header:
+
+0                               1               2               3
+  0   1   2   3   4   5   6   7   0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
++---+---+---+---+---+---+---+---+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|  Pkt Type     |  Chunk  Flags |        Pkt Length             |
+|               | R             |                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+\                                                               \
+/                          Chunk Value                          /
+\                                                               \
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
+| ID value  | Chunk Type                   |
+|-----------|------------------------------|
+| 0         | Ping                         |
+| 1         | Get Peers                    |
+| 2         | Route                        |
+| 3         | Stream Connect               |
+| 4         | Stream Data                  |
+
+
+
+
+| Bit       |   Meaning                    |
+|-----------+------------------------------|
+| R         | Response bit. This pkt is a  |
+|           | response from a previous     |
+|           | request                      |
+
+
+| 0         | Palyload data (DATA)         |
+| 1         | Init (INIT)                  |
+| 2         | (INIT ACK)                   |
+| 3         | Selective Acknowledge (SACK) |
+
+Chunk Flags
+
 
 
 

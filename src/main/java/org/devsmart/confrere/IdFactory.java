@@ -1,6 +1,9 @@
 package org.devsmart.confrere;
 
 
+import com.google.common.base.Charsets;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
@@ -13,8 +16,7 @@ public class IdFactory {
     @Inject
     Random mRandom;
 
-    @Inject
-    Provider<MessageDigest> mHashProvider;
+    public static final HashFunction HASH_FUNCTION = Hashing.sha1();
 
     public Id newRandomId() {
         byte[] data = new byte[Id.NUM_BYTES];
@@ -23,12 +25,7 @@ public class IdFactory {
     }
 
     public Id newId(String value){
-        try {
-            MessageDigest hash = mHashProvider.get();
-            byte[] data = hash.digest(value.getBytes("UTF-8"));
-            return new Id(data);
-        } catch (UnsupportedEncodingException e){
-            throw new RuntimeException(e);
-        }
+        byte[] data = HASH_FUNCTION.hashString(value, Charsets.UTF_8).asBytes();
+        return new Id(data);
     }
 }

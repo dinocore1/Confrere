@@ -2,12 +2,9 @@ package org.devsmart.confrere;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.TypeAdapterFactory;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-
-import java.security.MessageDigest;
 
 
 public class DefaultModule extends AbstractModule {
@@ -28,10 +25,5 @@ public class DefaultModule extends AbstractModule {
         return gson;
     }
 
-    @Provides
-    MessageDigest provideIdHashFunction() throws Exception{
-        MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
-        return sha1;
-    }
 
 }

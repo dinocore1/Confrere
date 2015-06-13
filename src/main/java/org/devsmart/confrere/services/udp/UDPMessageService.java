@@ -1,10 +1,6 @@
 package org.devsmart.confrere.services.udp;
 
 
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import org.devsmart.confrere.Context;
 import org.devsmart.confrere.Id;
@@ -14,7 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -92,8 +87,8 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
                 UDPPeer peer = mPeerRoutingTable.getPeer(from);
                 if(isInterested(peer)) {
                     peer.scheduleMaintenance(mContext.mainThread, mContext.localId, mClient);
-                    mClient.sendPong(mContext.localId, from.socketAddress);
                 }
+                mClient.sendPong(mContext.localId, from.socketAddress);
             }
         });
     }
