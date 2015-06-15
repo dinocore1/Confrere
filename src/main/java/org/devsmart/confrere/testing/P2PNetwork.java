@@ -8,7 +8,6 @@ public class P2PNetwork {
 
     private static class NodeKey implements Comparable<NodeKey> {
 
-        public NodeKey<>
 
         @Override
         public int compareTo(NodeKey nodeKey) {

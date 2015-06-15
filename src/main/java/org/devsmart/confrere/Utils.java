@@ -21,4 +21,15 @@ public class Utils {
         return new InetSocketAddress(address, port);
     }
 
+    public static void writeUInt16(byte[] buff, int offset, int value) {
+        buff[offset] = (byte) ((value & 0xFF00) >> 8);
+        buff[offset+1] = (byte) (value & 0x00FF);
+    }
+
+    public static int readUInt16(byte[] buff, int offset) {
+        int b1 = 0xFF & buff[offset];
+        int b2 = 0xFF & buff[offset+1];
+
+        return (b1 << 8 | b2) & 0xFFFF;
+    }
 }

@@ -1,5 +1,6 @@
 package org.devsmart.confrere;
 
+import com.google.common.base.Charsets;
 import com.google.common.io.BaseEncoding;
 
 import java.math.BigInteger;
@@ -7,8 +8,13 @@ import java.util.Arrays;
 
 public class Id {
 
-    public static final int NUM_BYTES = 20;
+    public static final int NUM_BYTES = 16;
     protected final byte[] mData = new byte[NUM_BYTES];
+
+    public static Id Id(String value){
+        byte[] data = IdFactory.HASH_FUNCTION.hashString(value, Charsets.UTF_8).asBytes();
+        return new Id(data);
+    }
 
     public Id(byte[] data){
         init(data, 0);

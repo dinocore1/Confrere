@@ -68,7 +68,7 @@ public class UDPClient {
 
             @Override
             public void run() {
-                logger.info("Starting UDP on {}", mSocketAddress);
+                logger.info("Starting Confrere Node on {}", mSocketAddress);
                 mIsRunning = true;
                 try {
                     setup();

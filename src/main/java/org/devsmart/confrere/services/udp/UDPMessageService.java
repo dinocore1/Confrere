@@ -1,10 +1,10 @@
 package org.devsmart.confrere.services.udp;
 
 
+import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import org.devsmart.confrere.Context;
 import org.devsmart.confrere.Id;
-import org.devsmart.confrere.services.AbstractService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +14,7 @@ import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-public class UDPMessageService implements AbstractService, UDPClient.Callback {
+public class UDPMessageService implements UDPClient.Callback {
 
     protected static final Logger logger = LoggerFactory.getLogger(UDPMessageService.class);
     public static final int MAX_PEERS_BUCKET = 8;
@@ -44,14 +44,12 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
         mSocketAddress = address;
     }
 
-    @Override
     public void start() {
         mClient.start(mSocketAddress);
         mBootstrapMaintanceTask = mContext.mainThread.scheduleWithFixedDelay(mBootstrapTaskRunnable, 30, 30, TimeUnit.SECONDS);
         mPrunePeersTask = mContext.mainThread.scheduleWithFixedDelay(mPrunePeersTaskRunnable, 2, 2, TimeUnit.MINUTES);
     }
 
-    @Override
     public void stop() {
         if(mPrunePeersTask != null){
             mPrunePeersTask.cancel(false);
@@ -161,14 +159,14 @@ public class UDPMessageService implements AbstractService, UDPClient.Callback {
         }
     };
 
-    protected Runnable mPrunePeersTaskRunnable = new Runnable() {
+    private static final Comparator<UDPPeer> NewestFirst = new Comparator<UDPPeer>() {
+        @Override
+        public int compare(UDPPeer udpPeer, UDPPeer udpPeer2) {
+            return Longs.compare(udpPeer2.mFirstSeen, udpPeer.mFirstSeen);
+        }
+    };
 
-        private final Comparator<UDPPeer> NewestFirst = new Comparator<UDPPeer>() {
-            @Override
-            public int compare(UDPPeer udpPeer, UDPPeer udpPeer2) {
-                return new Long(udpPeer2.mFirstSeen).compareTo(new Long(udpPeer.mFirstSeen));
-            }
-        };
+    protected Runnable mPrunePeersTaskRunnable = new Runnable() {
 
         @Override
         public void run() {
