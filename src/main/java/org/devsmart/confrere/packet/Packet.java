@@ -5,6 +5,8 @@ package org.devsmart.confrere.packet;
 
 public abstract class Packet {
 
+    private static final int RSP = 1 << 4;
+
     final byte[] mData;
 
     public Packet(byte[] data, int offset, int len) {
@@ -17,9 +19,14 @@ public abstract class Packet {
         return type;
     }
 
-    public final boolean getIPv6() {
-        boolean isIPV6 = (mData[0] & 1) > 0;
-        return isIPV6;
+    public final boolean isResponse() {
+        boolean retval = (mData[0] & RSP) > 1;
+        return retval;
+    }
+
+    public final boolean isIPv6() {
+        boolean retval = (mData[0] & 1) > 0;
+        return retval;
     }
 
 }

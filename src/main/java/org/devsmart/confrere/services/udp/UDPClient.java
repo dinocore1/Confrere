@@ -7,6 +7,7 @@ import com.google.gson.Gson;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.devsmart.confrere.Id;
+import org.devsmart.confrere.PacketFactory;
 import org.devsmart.confrere.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,6 +157,7 @@ public class UDPClient {
             @Override
             public void run() {
                 try {
+
                     byte[] data = new byte[1 + Id.NUM_BYTES];
                     data[0] = PING;
                     id.write(data, 1);

@@ -21,7 +21,7 @@ public class PacketFactory {
     }
 
     public static Packet parsePacket(byte[] data, int offset, int len) {
-        final int type = (data[offset] & 0xF0) >> 4;
+        final int type = 0xFFFF & (data[offset] & 0xF0) >> 4;
 
         Packet retval = null;
 

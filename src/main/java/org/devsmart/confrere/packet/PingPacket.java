@@ -28,7 +28,7 @@ public class PingPacket extends Packet {
     public InetSocketAddress getAddress() {
         if(mAddress == null) {
             try {
-                byte[] addressBytes = new byte[getIPv6() ? 16 : 4];
+                byte[] addressBytes = new byte[isIPv6() ? 16 : 4];
                 System.arraycopy(mData, PacketFactory.HEADER_SIZE + Id.NUM_BYTES, addressBytes, 0, addressBytes.length);
                 InetAddress address = InetAddress.getByAddress(addressBytes);
 
